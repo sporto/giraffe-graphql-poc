@@ -8,6 +8,8 @@ open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
 open Giraffe
+open FSharp.Data.GraphQL
+open FSharp.Data.GraphQL.Types
 
 // ---------------------------------
 // Models
@@ -17,6 +19,29 @@ type Message =
     {
         Text : string
     }
+
+type Person = { FirstName: string; LastName: string }
+
+let people = [ 
+    { FirstName = "Jane"; LastName = "Milton" }
+    { FirstName = "Travis"; LastName = "Smith" } ]
+
+// GraphQL type definition for Person type
+let Person = Define.Object("Person", [
+    Define.Field("firstName", String, fun ctx p -> p.FirstName)
+    Define.Field("lastName", String, fun ctx p -> p.LastName)  
+])
+
+// each schema must define so-called root query
+let QueryRoot = Define.Object("Query", [
+    Define.Field("people", ListOf Person, fun ctx () -> people)
+])
+
+// then initialize everything as part of schema
+let schema = Schema(QueryRoot)
+
+// Create an Exector for the schema
+let executor = Executor(schema)
 
 // ---------------------------------
 // Views
@@ -45,6 +70,40 @@ module Views =
             p [] [ encodedText model.Text ]
         ] |> layout
 
+module GraphiqlView =
+    open GiraffeViewEngine
+
+    let index =
+        html [] [
+            head [] [
+                link [
+                    _rel "stylesheet"
+                    _type "text/css"
+                    _href "//unpkg.com/graphiql@0.11.11/graphiql.css"
+                ]
+                link [
+                    _rel "stylesheet"
+                    _type "text/css"
+                    _href "/graphiql.css"
+                ]
+            ]
+            body [] [
+                div [ _id "app" ] []
+                script [
+                    _src "https://unpkg.com/react@16/umd/react.development.js"
+                ] []
+                script [
+                    _src "https://unpkg.com/react-dom@16/umd/react-dom.development.js"
+                ] []
+                script [
+                    _src "//unpkg.com/graphiql@0.11.11/graphiql.js"
+                ] []
+                script [
+                    _src "/graphiql.js"
+                ] []
+            ]
+        ]
+
 // ---------------------------------
 // Web app
 // ---------------------------------
@@ -55,12 +114,16 @@ let indexHandler (name : string) =
     let view      = Views.index model
     htmlView view
 
+let graphiql =
+    htmlView GraphiqlView.index
+
 let webApp =
     choose [
         GET >=>
             choose [
                 route "/" >=> indexHandler "world"
                 routef "/hello/%s" indexHandler
+                route "/graphiql" >=> graphiql
             ]
         setStatusCode 404 >=> text "Not Found" ]
 

@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FSharp.Data.GraphQL.Server" Version="0.0.7-beta" />
     <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.4" />
     <PackageReference Include="Giraffe" Version="2.0.*" />
   </ItemGroup>
